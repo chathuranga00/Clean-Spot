@@ -504,3 +504,41 @@ gantt
    - Implement unit and widget tests for Riverpod controllers.
    - Run `flutter analyze` and `flutter test` to ensure zero warnings.
    - Perform end-to-end verification of offline queue and security rules.
+
+---
+
+## 9. Optional FCM Notifications & Privacy Architecture
+
+### 9.1 Overview & Design Principles
+Push notifications in CleanSpot inform citizens of critical community defense actions:
+1. **Report Approved (`approved`)**: Verification that a reported hazard has been reviewed and added to the community map.
+2. **Report Rejected (`rejected`)**: Clear feedback if an image is indecipherable or ineligible, allowing the citizen to review.
+3. **Points Awarded (`points`)**: Instant notification when civic points are credited to the user's ledger.
+4. **Coupon Redeemed (`coupon_redeemed`)**: Confirmation when reward coupons are claimed.
+
+### 9.2 Privacy & Zero-Sensitive-Data Guarantee
+To protect citizen privacy and comply with strict security standards:
+- **No PII**: Names, email addresses, phone numbers, and reporter identities are **strictly excluded** from push titles, bodies, and data payloads.
+- **No Secret Coupon Codes**: Redemption push messages contain only non-sensitive metadata (e.g. `rewardId`, `rewardTitle`). Real coupon codes are **NEVER transmitted in push payloads**; they are exclusively accessible within the authenticated app under the user's private profile.
+- **Data Payload Schema**: All custom data entries are strictly non-sensitive key-value pairs (e.g., `{ type: 'points_awarded', points: '50' }`).
+
+### 9.3 User Stored Preferences
+Preferences are stored in Firestore under `users/{userId}.notificationPreferences`:
+```json
+{
+  "enabled": true,
+  "reportApproved": true,
+  "reportRejected": true,
+  "pointsAwarded": true,
+  "couponRedeemed": true
+}
+```
+- **Master Switch (`enabled`)**: When toggled off, all notification delivery is suppressed regardless of granular settings.
+- **Category Toggles**: Citizens can customize notifications per event type from the in-app Settings screen.
+
+### 9.4 Graceful Degradation & Unconfigured FCM Behavior
+- **Zero Hard Dependency**: CleanSpot functions completely normally if FCM is not configured, tokens are absent, or push services are disabled.
+- **Settings Screen Status Indicator**: Transparently shows active status when FCM is connected, or "FCM Not Configured (Offline / Local Mode)" with a reassurance that all app features remain fully operational.
+- **Server-Side Resilience**: Notification failures or missing FCM credentials in Cloud Functions are caught safely with non-fatal logging and never abort core transactional workflows (e.g., point awarding or reward redemption).
+- **Token Maintenance**: Unregistered or invalid tokens (`messaging/registration-token-not-registered`) are pruned automatically from `users/{userId}.fcmTokens`.
+

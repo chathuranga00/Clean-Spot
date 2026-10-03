@@ -20,6 +20,14 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('My Profile'),
         elevation: 0,
+        actions: [
+          IconButton(
+            key: const Key('btn_profile_settings'),
+            icon: const Icon(Icons.settings),
+            tooltip: 'Notification Settings',
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
       ),
       body: userProfileAsync.when(
         data: (profile) {
@@ -326,7 +334,28 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
+
+                // Settings & Preferences
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    key: const Key('tile_profile_notifications_settings'),
+                    leading: const Icon(Icons.notifications_active_outlined,
+                        color: AppColors.primaryTeal),
+                    title: const Text('Notification Preferences',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text(
+                      'Manage push notification channels & privacy',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/settings'),
+                  ),
+                ),
+                const SizedBox(height: 24),
 
                 // Logout Action
                 SizedBox(

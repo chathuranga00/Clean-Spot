@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { haversineDistance, encodeGeohash } from '../utils/geo';
 import { validateStage3, Stage3Input } from './validateStage3';
+import { sendNotificationToUser } from '../notifications/notificationService';
 import {
   IVisionModelService,
   Stage3Config,
@@ -184,6 +185,11 @@ export async function validateAndProcessReport(
 
   if (!stage1Result.isValid) {
     stateHistory.push('rejected');
+    if (input.reporterId) {
+      sendNotificationToUser(db, input.reporterId, 'rejected', {
+        rejectionReason: stage1Result.reason,
+      }).catch(() => {});
+    }
     return {
       status: 'rejected',
       isDuplicate: false,
@@ -258,6 +264,13 @@ export async function validateAndProcessReport(
     }
 
     await failedReportRef.set(docData);
+
+    if (stage3Result.status === 'rejected') {
+      sendNotificationToUser(db, input.reporterId, 'rejected', {
+        reportId: failedReportRef.id,
+        rejectionReason: stage3Result.explanation,
+      }).catch(() => {});
+    }
 
     return {
       status: stage3Result.status,

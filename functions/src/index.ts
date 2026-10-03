@@ -77,3 +77,15 @@ export {
   DistrictRiskSummary,
   DistrictRiskSummarySchema,
 } from './risk/types';
+export {
+  NotificationEventType,
+  UserNotificationPreferences,
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  SafeNotificationPayload,
+  SendNotificationResult,
+} from './notifications/types';
+export {
+  buildSafeNotificationPayload,
+  isNotificationAllowed,
+  sendNotificationToUser,
+} from './notifications/notificationService';

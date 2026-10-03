@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import { sendNotificationToUser } from '../notifications/notificationService';
 
 export interface RedeemRewardInput {
   userId: string;
@@ -53,7 +54,7 @@ export async function executeRedeemRewardTransaction(
   const now = currentDate || new Date();
   const timestampNow = admin.firestore.Timestamp.fromDate(now);
 
-  return await db.runTransaction(async (transaction) => {
+  const result = await db.runTransaction(async (transaction) => {
     // 1. Idempotency Check: check if redemptions/{idempotencyKey} already exists
     const redemptionRef = db.collection('redemptions').doc(idempotencyKey);
     const redemptionDoc = await transaction.get(redemptionRef);
@@ -329,4 +330,13 @@ export async function executeRedeemRewardTransaction(
       message: `Successfully redeemed ${title} for ${costPoints} points!`,
     };
   });
+
+  if (result.success && !result.alreadyRedeemed) {
+    sendNotificationToUser(db, userId, 'coupon_redeemed', {
+      rewardId: result.rewardId,
+      rewardTitle: result.rewardTitle,
+    }).catch(() => {});
+  }
+
+  return result;
 }

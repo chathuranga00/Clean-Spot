@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import { sendNotificationToUser } from '../notifications/notificationService';
 
 export const DEFAULT_REPORT_POINTS = 50;
 
@@ -57,7 +58,7 @@ export async function awardReportPoints(
   const idempotencyKey = options?.idempotencyKey || `report_${reportId}_approved`;
   const pointsToAward = options?.points ?? DEFAULT_REPORT_POINTS;
 
-  return await db.runTransaction(async (transaction) => {
+  const result = await db.runTransaction(async (transaction) => {
     const txRef = db.collection('pointsTransactions').doc(idempotencyKey);
     const txDoc = await transaction.get(txRef);
 
@@ -194,8 +195,17 @@ export async function awardReportPoints(
       transactionId: idempotencyKey,
       message: `Successfully awarded ${pointsToAward} points to user ${userId}.`,
       userTotalPoints: newTotal,
+      userId,
     };
   });
+
+  if (result.success && !result.alreadyAwarded && (result as any).userId) {
+    const targetUserId = (result as any).userId;
+    sendNotificationToUser(db, targetUserId, 'approved', { reportId }).catch(() => {});
+    sendNotificationToUser(db, targetUserId, 'points', { points: pointsToAward, reportId }).catch(() => {});
+  }
+
+  return result;
 }
 
 /**

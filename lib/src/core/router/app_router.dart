@@ -23,6 +23,7 @@ import '../../features/reports/presentation/report_detail_screen.dart';
 import '../../features/reports/presentation/report_review_screen.dart';
 import '../../features/rewards/presentation/redemption_history_screen.dart';
 import '../../features/rewards/presentation/reward_shop_screen.dart';
+import '../../features/notifications/presentation/settings_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _homeNavigatorKey = GlobalKey<NavigatorState>();
@@ -211,6 +212,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/admin/review',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const AdminReviewScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SettingsScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
