@@ -48,6 +48,20 @@ service cloud.firestore {
                     && request.resource.data.pointsAwarded == 0;
 
       allow update, delete: if isAdmin();
+
+      // Observations subcollection (duplicates/follow-ups)
+      match /observations/{observationId} {
+        allow read: if isAuthenticated();
+        allow write: if false;
+      }
+    }
+
+    // Immutable Points Transactions Ledger
+    match /pointsTransactions/{transactionId} {
+      // Users can only read their own transactions; admins/PHIs can read all
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      // Writable ONLY via server-side Cloud Functions (transactions)
+      allow write: if false;
     }
 
     // Default deny-all for all other documents until each respective feature is built

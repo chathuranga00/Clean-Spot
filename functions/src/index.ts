@@ -25,3 +25,10 @@ export {
   setGlobalVisionService,
   getSharedMockService,
 } from './services/vision/visionFactory';
+export {
+  awardReportPoints,
+  finalizeApprovedReport,
+  DEFAULT_REPORT_POINTS,
+  PointsTransactionRecord,
+  AwardPointsResult,
+} from './points/awardReportPoints';
