@@ -103,9 +103,29 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Calculated Risk Summaries & Trends per District
+    match /riskSummaries/{district} {
+      // Authenticated users can view district risk insights and decision-support indicators
+      allow read: if isAuthenticated();
+      // Writable ONLY by authorized admins or automated backend processes
+      allow write: if isAdmin();
+
+      match /versions/{versionId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin();
+      }
+    }
+
+    // Risk Calculation Metadata
+    match /riskMetadata/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
     // Default deny-all for all other documents until each respective feature is built
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
+

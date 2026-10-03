@@ -61,3 +61,19 @@ export {
   ImportResult,
   SRI_LANKA_HEALTH_DISTRICTS,
 } from './historical/types';
+export { calculateRiskInsights } from './callable/calculateRiskInsightsCallable';
+export { scheduledRiskCalculation } from './triggers/scheduledRiskCalculation';
+export { executeCalculateRiskInsights } from './risk/calculateRiskInsights';
+export {
+  RiskConfig,
+  RiskLevel,
+  DEFAULT_RISK_CONFIG,
+  CIVIC_SEVERITY_WEIGHTS,
+  normalizeHistoricalScore,
+  calculateCivicSeverity,
+  normalizeCivicScore,
+  computeCompositeRiskIndex,
+  classifyRiskLevel,
+  DistrictRiskSummary,
+  DistrictRiskSummarySchema,
+} from './risk/types';
