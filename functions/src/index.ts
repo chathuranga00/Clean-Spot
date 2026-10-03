@@ -7,3 +7,4 @@
 
 export { onUserCreated } from "./triggers/onUserCreated";
 export { submitReport } from "./callable/submitReport";
+export { validateAndProcessReport, validateStage1 } from "./validation/validateReport";

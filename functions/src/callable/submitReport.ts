@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
+import { validateAndProcessReport, ReportInput } from "../validation/validateReport";
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -7,9 +8,9 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-interface SubmitReportData {
+interface SubmitReportRequestData {
   imageUrl: string;
-  storagePath: string;
+  storagePath?: string;
   latitude: number;
   longitude: number;
   accuracy: number;
@@ -19,24 +20,18 @@ interface SubmitReportData {
   district?: string;
 }
 
-const VALID_CATEGORIES = [
-  "standingWater",
-  "discardedContainers",
-  "blockedDrain",
-  "tyres",
-  "constructionSite",
-  "other",
-];
-
 /**
- * Callable Cloud Function stub: submitReport
+ * Callable Cloud Function: submitReport
  *
- * Receives report metadata from authenticated client, validates inputs,
- * and authoritatively creates the pending report in Firestore.
- * Points are initialized to 0 and cannot be set or influenced by the client.
+ * Implements authoritative report submission with the state machine:
+ * submitted -> validating -> approved | rejected
+ *
+ * Stage 1: Input & GPS validity, accuracy threshold (<=100m), and rate limiting.
+ * Stage 2: Transactional duplicate detection (same user, <=50m radius, <=14 days).
+ * Duplicates become "still present" observations in reports/{id}/observations with 0 points.
  */
 export const submitReport = functions.https.onCall(
-  async (data: SubmitReportData, context) => {
+  async (data: SubmitReportRequestData, context) => {
     // 1. Authentication check
     if (!context.auth) {
       throw new functions.https.HttpsError(
@@ -47,43 +42,7 @@ export const submitReport = functions.https.onCall(
 
     const { uid } = context.auth;
 
-    // 2. Validate input fields
-    if (!data.imageUrl || typeof data.imageUrl !== "string") {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "A valid image URL is required for hazard report verification."
-      );
-    }
-
-    if (
-      typeof data.latitude !== "number" ||
-      typeof data.longitude !== "number" ||
-      data.latitude < -90 ||
-      data.latitude > 90 ||
-      data.longitude < -180 ||
-      data.longitude > 180
-    ) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Valid GPS coordinates (latitude and longitude) are required."
-      );
-    }
-
-    if (!data.category || !VALID_CATEGORIES.includes(data.category)) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        `Invalid category. Must be one of: ${VALID_CATEGORIES.join(", ")}`
-      );
-    }
-
-    if (data.description && data.description.length > 500) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Description cannot exceed 500 characters."
-      );
-    }
-
-    // 3. Fetch user info for author tag
+    // 2. Fetch reporter profile for name & home district
     let reporterName = "Citizen";
     let userDistrict = "Colombo";
 
@@ -98,36 +57,39 @@ export const submitReport = functions.https.onCall(
       console.warn(`[CleanSpot] Could not fetch user profile for ${uid}:`, e);
     }
 
-    const reportRef = db.collection("reports").doc();
-    const reportData = {
-      reportId: reportRef.id,
+    const reportInput: ReportInput = {
       reporterId: uid,
-      reporterName: reporterName,
+      reporterName,
       imageUrl: data.imageUrl,
-      storagePath: data.storagePath || `reports/${uid}/${reportRef.id}.jpg`,
-      location: new admin.firestore.GeoPoint(data.latitude, data.longitude),
-      accuracy: typeof data.accuracy === "number" ? data.accuracy : 0,
-      district: data.district || userDistrict,
-      addressText: data.addressText || "",
+      storagePath: data.storagePath,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      accuracy: data.accuracy,
       category: data.category,
-      description: data.description ? data.description.trim() : "",
-      status: "pending",
-      riskLevel: 1,
-      pointsAwarded: 0,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      description: data.description,
+      district: data.district || userDistrict,
+      addressText: data.addressText,
     };
 
-    await reportRef.set(reportData);
+    // 3. Execute State Machine Validation (Stages 1 & 2 in Firestore Transaction)
+    const result = await validateAndProcessReport(db, reportInput);
 
-    console.log(
-      `[CleanSpot] Report ${reportRef.id} successfully created by user ${uid} (category: ${data.category}).`
-    );
+    if (result.status === "rejected") {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        result.rejectionReason || result.message
+      );
+    }
 
     return {
       success: true,
-      reportId: reportRef.id,
-      message: "Report submitted successfully. Pending PHI inspection and AI verification.",
+      status: result.status,
+      isDuplicate: result.isDuplicate,
+      reportId: result.reportId,
+      observationId: result.observationId,
+      stateHistory: result.stateHistory,
+      pointsAwarded: result.pointsAwarded,
+      message: result.message,
     };
   }
 );
