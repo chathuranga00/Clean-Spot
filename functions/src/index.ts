@@ -42,3 +42,8 @@ export {
   seedDemoRewardsAndCoupons,
   DEMO_REWARDS_CATALOG,
 } from './rewards/seedRewards';
+export {
+  getPublicReportDetails,
+  fetchPublicReportDetails,
+  PublicReportDetails,
+} from './callable/getPublicReportDetails';

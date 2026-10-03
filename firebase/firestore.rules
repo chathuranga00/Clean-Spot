@@ -37,8 +37,12 @@ service cloud.firestore {
 
     // Reports collection
     match /reports/{reportId} {
-      // Users can ONLY read their own reports; admins/PHIs can read all reports
-      allow read: if isAuthenticated() && (resource.data.reporterId == request.auth.uid || isAdmin());
+      // Users can read their own reports; authenticated users can read approved public reports for the live map; admins can read all
+      allow read: if isAuthenticated() && (
+        resource.data.reporterId == request.auth.uid ||
+        resource.data.status in ['approved', 'verified'] ||
+        isAdmin()
+      );
 
       // Creation will be enabled in Section D (client writes new reports with status='pending')
       // Points and status updates can NEVER be directly written by regular users
