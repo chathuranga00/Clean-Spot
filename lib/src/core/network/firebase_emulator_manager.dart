@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -47,8 +48,11 @@ class FirebaseEmulatorManager {
       // Connect Firebase Storage to emulator
       await FirebaseStorage.instance.useStorageEmulator(host, storagePort);
 
+      // Connect Cloud Functions to emulator
+      FirebaseFunctions.instance.useFunctionsEmulator(host, functionsPort);
+
       debugPrint(
-        'Connected to Firebase Emulators at $host (Auth:$authPort, Firestore:$firestorePort, Storage:$storagePort)',
+        'Connected to Firebase Emulators at $host (Auth:$authPort, Firestore:$firestorePort, Storage:$storagePort, Functions:$functionsPort)',
       );
     } catch (e) {
       debugPrint('Notice: Firebase Emulator connection skipped or already initialized: $e');

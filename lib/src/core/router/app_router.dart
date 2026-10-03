@@ -20,6 +20,7 @@ import '../../features/reports/presentation/home_screen.dart';
 import '../../features/reports/presentation/my_reports_screen.dart';
 import '../../features/reports/presentation/new_report_screen.dart';
 import '../../features/reports/presentation/report_detail_screen.dart';
+import '../../features/reports/presentation/report_review_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _homeNavigatorKey = GlobalKey<NavigatorState>();
@@ -171,6 +172,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // Sub-routes outside Bottom Nav
+      GoRoute(
+        path: '/report/review',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ReportReviewScreen(),
+      ),
       GoRoute(
         path: '/report/:id',
         parentNavigatorKey: _rootNavigatorKey,

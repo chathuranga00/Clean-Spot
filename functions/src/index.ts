@@ -6,3 +6,4 @@
  */
 
 export { onUserCreated } from "./triggers/onUserCreated";
+export { submitReport } from "./callable/submitReport";

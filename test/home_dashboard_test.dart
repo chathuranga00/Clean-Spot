@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:cleanspot/src/core/utils/location_service.dart';
 import 'package:cleanspot/src/features/auth/data/auth_repository.dart';
 import 'package:cleanspot/src/features/auth/domain/auth_user.dart';
@@ -40,6 +41,33 @@ class MockReportRepository implements ReportRepository {
   @override
   Stream<List<ReportModel>> watchNearbyHazards({String? district}) {
     return Stream.value(reports);
+  }
+
+  @override
+  Future<({String downloadUrl, String storagePath})> uploadReportImage({
+    required String userId,
+    required Uint8List imageBytes,
+    required String fileName,
+  }) async {
+    return (
+      downloadUrl: 'https://example.com/mock.jpg',
+      storagePath: 'reports/$userId/$fileName.jpg'
+    );
+  }
+
+  @override
+  Future<String> submitReport({
+    required String imageUrl,
+    required String storagePath,
+    required double latitude,
+    required double longitude,
+    required double accuracy,
+    required HazardCategory category,
+    String? description,
+    String? district,
+    String? addressText,
+  }) async {
+    return 'mock_report_id';
   }
 }
 

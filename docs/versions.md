@@ -19,6 +19,10 @@
 | [`flutter_riverpod`](https://pub.dev/packages/flutter_riverpod) | `3.4.3` | Reactive state management & dependency injection with NotifierProvider |
 | [`go_router`](https://pub.dev/packages/go_router) | `18.0.2` | Declarative routing, URI path parameter support & navigation guards |
 | [`cupertino_icons`](https://pub.dev/packages/cupertino_icons) | `1.0.9` | iOS styling glyphs |
+| [`geolocator`](https://pub.dev/packages/geolocator) | `14.1.1` | Geolocation services, accuracy thresholding, and permission handling |
+| [`image_picker`](https://pub.dev/packages/image_picker) | `1.2.3` | Camera photo capture and gallery image selection |
+| [`image`](https://pub.dev/packages/image) | `4.10.1` | Pure Dart image decoding, resizing, and EXIF metadata stripping |
+| [`cloud_functions`](https://pub.dev/packages/cloud_functions) | `6.5.0` | Callable Cloud Function triggers for authoritative server-side report creation |
 
 ---
 
