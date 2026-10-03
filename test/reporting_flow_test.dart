@@ -55,6 +55,9 @@ class MockReportRepositoryForReporting implements ReportRepository {
   Stream<List<ReportModel>> watchRecentReports(String reporterId) => Stream.value(const []);
 
   @override
+  Stream<List<ReportModel>> watchUserReports(String reporterId) => Stream.value(const []);
+
+  @override
   Stream<UserModel?> watchUserProfile(String uid) => Stream.value(null);
 }
 

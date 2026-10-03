@@ -44,6 +44,11 @@ class MockReportRepository implements ReportRepository {
   }
 
   @override
+  Stream<List<ReportModel>> watchUserReports(String reporterId) {
+    return Stream.value(reports);
+  }
+
+  @override
   Future<({String downloadUrl, String storagePath})> uploadReportImage({
     required String userId,
     required Uint8List imageBytes,

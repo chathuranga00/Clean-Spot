@@ -116,6 +116,42 @@ class ReportRepository {
           .toList();
     });
   }
+
+  /// Streams all reports submitted by the given user
+  Stream<List<ReportModel>> watchUserReports(String reporterId) {
+    if (reporterId.isEmpty) return Stream.value(const []);
+
+    return _firestore
+        .collection('reports')
+        .where('reporterId', isEqualTo: reporterId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => ReportModel.fromMap(doc.data(), doc.id))
+          .toList();
+    });
+  }
+}
+
+enum ReportHistoryFilter {
+  all,
+  approved,
+  rejected,
+  stillPresent;
+
+  String get label {
+    switch (this) {
+      case ReportHistoryFilter.all:
+        return 'All';
+      case ReportHistoryFilter.approved:
+        return 'Approved';
+      case ReportHistoryFilter.rejected:
+        return 'Rejected';
+      case ReportHistoryFilter.stillPresent:
+        return 'Still Present';
+    }
+  }
 }
 
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
@@ -151,6 +187,60 @@ final recentReportsStreamProvider =
   final authUser = ref.watch(authStateChangesProvider).value;
   if (authUser == null) return Stream.value(const []);
   return ref.watch(reportRepositoryProvider).watchRecentReports(authUser.uid);
+});
+
+/// Streams all reports submitted by the logged in user
+final userReportsStreamProvider =
+    StreamProvider.autoDispose<List<ReportModel>>((ref) {
+  final authUser = ref.watch(authStateChangesProvider).value;
+  if (authUser == null) return Stream.value(const []);
+  return ref.watch(reportRepositoryProvider).watchUserReports(authUser.uid);
+});
+
+class ReportHistoryFilterNotifier extends Notifier<ReportHistoryFilter> {
+  @override
+  ReportHistoryFilter build() => ReportHistoryFilter.all;
+
+  void setFilter(ReportHistoryFilter filter) {
+    state = filter;
+  }
+}
+
+/// Currently active filter on the report history screen
+final reportHistoryFilterProvider =
+    NotifierProvider.autoDispose<ReportHistoryFilterNotifier, ReportHistoryFilter>(
+  ReportHistoryFilterNotifier.new,
+);
+
+/// Filtered list of user reports based on active ReportHistoryFilter
+final filteredUserReportsProvider =
+    Provider.autoDispose<AsyncValue<List<ReportModel>>>((ref) {
+  final reportsAsync = ref.watch(userReportsStreamProvider);
+  final filter = ref.watch(reportHistoryFilterProvider);
+
+  return reportsAsync.whenData((reports) {
+    switch (filter) {
+      case ReportHistoryFilter.all:
+        return reports;
+      case ReportHistoryFilter.approved:
+        return reports
+            .where((r) =>
+                r.status.isApproved ||
+                (r.pointsAwarded > 0 && r.status != ReportStatus.rejected))
+            .toList();
+      case ReportHistoryFilter.rejected:
+        return reports
+            .where((r) => r.status == ReportStatus.rejected)
+            .toList();
+      case ReportHistoryFilter.stillPresent:
+        return reports
+            .where((r) =>
+                r.status == ReportStatus.stillPresent ||
+                r.isDuplicate ||
+                r.observationCount > 1)
+            .toList();
+    }
+  });
 });
 
 /// Streams active community hazards

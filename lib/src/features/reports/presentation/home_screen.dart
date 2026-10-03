@@ -468,9 +468,12 @@ class HomeScreen extends ConsumerWidget {
 
   Color _getStatusColor(ReportStatus status) {
     switch (status) {
+      case ReportStatus.approved:
       case ReportStatus.verified:
       case ReportStatus.resolved:
         return const Color(0xFF43A047);
+      case ReportStatus.stillPresent:
+        return const Color(0xFFFB8C00);
       case ReportStatus.inProgress:
         return const Color(0xFF0288D1);
       case ReportStatus.rejected:
@@ -482,8 +485,11 @@ class HomeScreen extends ConsumerWidget {
 
   IconData _getStatusIcon(ReportStatus status) {
     switch (status) {
+      case ReportStatus.approved:
       case ReportStatus.verified:
         return Icons.verified;
+      case ReportStatus.stillPresent:
+        return Icons.replay;
       case ReportStatus.resolved:
         return Icons.check_circle;
       case ReportStatus.inProgress:

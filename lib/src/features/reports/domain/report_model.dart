@@ -2,15 +2,22 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum ReportStatus {
   pending,
+  approved,
   verified,
+  stillPresent,
   inProgress,
   resolved,
   rejected;
 
   static ReportStatus fromString(String? value) {
     switch (value) {
+      case 'approved':
+        return ReportStatus.approved;
       case 'verified':
         return ReportStatus.verified;
+      case 'still_present':
+      case 'stillPresent':
+        return ReportStatus.stillPresent;
       case 'in_progress':
       case 'inProgress':
         return ReportStatus.inProgress;
@@ -18,6 +25,9 @@ enum ReportStatus {
         return ReportStatus.resolved;
       case 'rejected':
         return ReportStatus.rejected;
+      case 'submitted':
+      case 'validating':
+      case 'retry_pending':
       case 'pending':
       default:
         return ReportStatus.pending;
@@ -26,33 +36,44 @@ enum ReportStatus {
 
   String toDbString() {
     switch (this) {
-      case ReportStatus.pending:
-        return 'pending';
+      case ReportStatus.approved:
+        return 'approved';
       case ReportStatus.verified:
         return 'verified';
+      case ReportStatus.stillPresent:
+        return 'still_present';
       case ReportStatus.inProgress:
         return 'in_progress';
       case ReportStatus.resolved:
         return 'resolved';
       case ReportStatus.rejected:
         return 'rejected';
+      case ReportStatus.pending:
+        return 'pending';
     }
   }
 
   String get displayName {
     switch (this) {
-      case ReportStatus.pending:
-        return 'Pending Review';
+      case ReportStatus.approved:
+        return 'Approved';
       case ReportStatus.verified:
         return 'Verified Hazard';
+      case ReportStatus.stillPresent:
+        return 'Still Present';
       case ReportStatus.inProgress:
         return 'Cleanup In Progress';
       case ReportStatus.resolved:
-        return 'Resolved / Cleaned';
+        return 'Resolved';
       case ReportStatus.rejected:
-        return 'Dismissed';
+        return 'Rejected';
+      case ReportStatus.pending:
+        return 'Validating';
     }
   }
+
+  bool get isApproved =>
+      this == ReportStatus.approved || this == ReportStatus.verified;
 }
 
 enum HazardCategory {
@@ -116,6 +137,10 @@ class ReportModel {
   final ReportStatus status;
   final int riskLevel; // 1 (Low), 2 (Medium), 3 (High)
   final int pointsAwarded;
+  final String? rejectionReason;
+  final bool isDuplicate;
+  final int observationCount;
+  final String? pointsTransactionId;
   final DateTime createdAt;
 
   const ReportModel({
@@ -132,6 +157,10 @@ class ReportModel {
     this.status = ReportStatus.pending,
     this.riskLevel = 1,
     this.pointsAwarded = 0,
+    this.rejectionReason,
+    this.isDuplicate = false,
+    this.observationCount = 1,
+    this.pointsTransactionId,
     required this.createdAt,
   });
 
@@ -156,6 +185,15 @@ class ReportModel {
       created = DateTime.tryParse(createdAtData) ?? DateTime.now();
     }
 
+    String? reason = map['rejectionReason'] as String?;
+    if ((reason == null || reason.isEmpty) && map['aiAnalysis'] is Map) {
+      reason = (map['aiAnalysis'] as Map)['explanation'] as String?;
+    }
+
+    final rawStatus = map['status'] as String?;
+    final bool isDup = (map['isDuplicate'] as bool?) ??
+        (rawStatus == 'still_present' || rawStatus == 'stillPresent');
+
     return ReportModel(
       reportId: id,
       reporterId: map['reporterId'] as String? ?? '',
@@ -167,9 +205,13 @@ class ReportModel {
       addressText: map['addressText'] as String? ?? '',
       category: HazardCategory.fromString(map['category'] as String?),
       description: map['description'] as String? ?? '',
-      status: ReportStatus.fromString(map['status'] as String?),
+      status: ReportStatus.fromString(rawStatus),
       riskLevel: (map['riskLevel'] as num?)?.toInt() ?? 1,
       pointsAwarded: (map['pointsAwarded'] as num?)?.toInt() ?? 0,
+      rejectionReason: reason,
+      isDuplicate: isDup,
+      observationCount: (map['observationCount'] as num?)?.toInt() ?? 1,
+      pointsTransactionId: map['pointsTransactionId'] as String?,
       createdAt: created,
     );
   }
@@ -188,6 +230,10 @@ class ReportModel {
       'status': status.toDbString(),
       'riskLevel': riskLevel,
       'pointsAwarded': pointsAwarded,
+      'rejectionReason': rejectionReason,
+      'isDuplicate': isDuplicate,
+      'observationCount': observationCount,
+      'pointsTransactionId': pointsTransactionId,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
