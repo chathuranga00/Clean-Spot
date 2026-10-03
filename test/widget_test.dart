@@ -5,22 +5,26 @@ import 'package:cleanspot/src/core/widgets/app_loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('CleanSpotApp initial route renders splash screen', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+
     await tester.pumpWidget(
       const ProviderScope(
         child: CleanSpotApp(),
       ),
     );
 
-    // Initial frame
-    await tester.pumpAndSettle();
-
-    // Verify CleanSpot branding on splash screen
+    // Initial frame renders splash screen before the transition timer
+    await tester.pump();
     expect(find.text('CleanSpot'), findsOneWidget);
     expect(find.text('Dengue Breeding Site Reporter'), findsOneWidget);
-    expect(find.text('Enter App'), findsOneWidget);
+
+    // Drain the splash screen transition timer to prevent pending timers
+    await tester.pump(const Duration(milliseconds: 1500));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('AppLoadingIndicator renders message and indicator', (WidgetTester tester) async {

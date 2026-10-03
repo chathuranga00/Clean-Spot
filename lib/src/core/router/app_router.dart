@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/presentation/admin_review_screen.dart';
+import '../../features/auth/application/auth_controller.dart';
+import '../../features/auth/data/auth_repository.dart';
+import '../../features/auth/presentation/email_verification_screen.dart';
+import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/onboarding_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
@@ -17,9 +21,54 @@ import '../../features/reports/presentation/new_report_screen.dart';
 import '../../features/reports/presentation/report_detail_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authStateChangesProvider);
+  final onboardingDone = ref.watch(onboardingProvider);
+
   return GoRouter(
     initialLocation: '/splash',
     debugLogDiagnostics: false,
+    redirect: (context, state) {
+      final loc = state.uri.path;
+      final isSplash = loc == '/splash';
+      final isOnboarding = loc == '/onboarding';
+      final isLogin = loc == '/login';
+      final isRegister = loc == '/register';
+      final isForgotPassword = loc == '/forgot-password';
+      final isAuthFlow = isLogin || isRegister || isForgotPassword;
+
+      // Allow splash to perform initial resolution
+      if (isSplash) return null;
+
+      // If onboarding is not completed, direct to onboarding
+      if (!onboardingDone) {
+        return isOnboarding ? null : '/onboarding';
+      }
+
+      // If auth state is still resolving, do not interrupt
+      if (authState.isLoading) return null;
+
+      final user = authState.value;
+
+      // Unauthenticated users
+      if (user == null) {
+        if (isAuthFlow || isOnboarding) {
+          return null;
+        }
+        return '/login';
+      }
+
+      // Authenticated users with unverified email
+      if (!user.isEmailVerified && loc != '/verify-email') {
+        return '/verify-email';
+      }
+
+      // Authenticated users with verified email trying to hit auth flows
+      if (user.isEmailVerified && (isAuthFlow || isOnboarding || loc == '/verify-email')) {
+        return '/home';
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/splash',
@@ -36,6 +85,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        builder: (context, state) => const EmailVerificationScreen(),
       ),
       GoRoute(
         path: '/home',

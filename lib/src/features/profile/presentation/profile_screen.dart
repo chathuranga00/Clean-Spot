@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class ProfileScreen extends StatelessWidget {
+import '../../auth/application/auth_controller.dart';
+import '../../auth/data/auth_repository.dart';
+
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authRepositoryProvider).currentUser;
+    final name = user?.displayName.isNotEmpty == true ? user!.displayName : 'Citizen';
+    final email = user?.email ?? 'citizen@example.com';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Profile'),
@@ -21,26 +29,32 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Kamal Perera',
+              name,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
             ),
-            const Text('citizen@example.com • Colombo District'),
+            const SizedBox(height: 4),
+            Text(
+              email,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildStatCard(context, 'Total Points', '250', const Color(0xFFFFB300)),
-                _buildStatCard(context, 'Verified Reports', '5', const Color(0xFF00897B)),
-                _buildStatCard(context, 'Rank', '#4', const Color(0xFF43A047)),
+                _buildStatCard(context, 'Total Points', '0', const Color(0xFFFFB300)),
+                _buildStatCard(context, 'Verified Reports', '0', const Color(0xFF00897B)),
+                _buildStatCard(context, 'Status', user?.isEmailVerified == true ? 'Verified' : 'Unverified', const Color(0xFF43A047)),
               ],
             ),
             const SizedBox(height: 32),
             ListTile(
               leading: const Icon(Icons.badge_outlined),
               title: const Text('Badges Earned'),
-              subtitle: const Text('Community Guardian, First Spotter'),
+              subtitle: const Text('Server-authorized civic awards'),
               trailing: const Icon(Icons.chevron_right),
             ),
             const Divider(),
@@ -51,7 +65,12 @@ class ProfileScreen extends StatelessWidget {
             ),
             const Spacer(),
             OutlinedButton.icon(
-              onPressed: () => context.go('/login'),
+              onPressed: () async {
+                await ref.read(authControllerProvider.notifier).signOut();
+                if (context.mounted) {
+                  context.go('/login');
+                }
+              },
               icon: const Icon(Icons.logout),
               label: const Text('Log Out'),
             ),
@@ -71,7 +90,7 @@ class ProfileScreen extends StatelessWidget {
             Text(
               value,
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
