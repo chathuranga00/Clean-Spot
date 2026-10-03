@@ -1,7 +1,18 @@
 import * as admin from 'firebase-admin';
 import { haversineDistance, encodeGeohash } from '../utils/geo';
+import { validateStage3, Stage3Input } from './validateStage3';
+import {
+  IVisionModelService,
+  Stage3Config,
+  VisionAnalysisResult,
+} from '../services/vision/types';
 
-export type ReportStateMachineStatus = 'submitted' | 'validating' | 'approved' | 'rejected';
+export type ReportStateMachineStatus =
+  | 'submitted'
+  | 'validating'
+  | 'approved'
+  | 'rejected'
+  | 'retry_pending';
 
 export interface ReportInput {
   reporterId: string;
@@ -23,9 +34,11 @@ export interface ValidationConfig {
   rateLimitMaxReports?: number; // default: 10
   rateLimitWindowMs?: number; // default: 1 hour (3600000ms)
   maxGpsAccuracyMeters?: number; // default: 100
+  stage3?: Stage3Config;
+  visionService?: IVisionModelService;
 }
 
-export const DEFAULT_CONFIG: Required<ValidationConfig> = {
+export const DEFAULT_CONFIG: Required<Omit<ValidationConfig, 'stage3' | 'visionService'>> = {
   duplicateRadiusMeters: 50,
   duplicateWindowDays: 14,
   rateLimitMaxReports: 10,
@@ -57,6 +70,7 @@ export interface ValidationFinalResult {
   pointsAwarded: number;
   message: string;
   rejectionReason?: string;
+  aiAnalysis?: VisionAnalysisResult | Record<string, unknown>;
 }
 
 /**
@@ -65,7 +79,7 @@ export interface ValidationFinalResult {
 export async function validateStage1(
   db: admin.firestore.Firestore,
   input: ReportInput,
-  config: Required<ValidationConfig>,
+  config: Required<Omit<ValidationConfig, 'stage3' | 'visionService'>>,
   now: Date = new Date()
 ): Promise<Stage1Result> {
   // 1. Reporter check
@@ -143,10 +157,13 @@ export async function validateStage1(
 }
 
 /**
- * Stage 2 Validation & Execution inside a Firestore Transaction:
- * Performs duplicate detection (same user, <= 50m, <= 14 days) using Geohash + Haversine.
- * If duplicate: writes observation into reports/{id}/observations with status 'still_present' (0 pts).
- * If unique: creates new report with state machine transition submitted -> validating -> approved.
+ * Validates and authoritatively processes a hazard report through Stages 1, 2, and 3:
+ *
+ * Stage 1: Input / GPS bounds, accuracy threshold, rate limiting.
+ * Stage 2: Transactional duplicate detection (same user, <= 50m, <= 14 days).
+ * Stage 3: Vision model analysis with rubric, schema validation, and configurable thresholds.
+ *          Uncertain results (< minConfidence, irrelevant, or no hazard) are rejected.
+ *          Timeouts or API failures do NOT approve; report is marked for documented retry or rejection.
  */
 export async function validateAndProcessReport(
   db: admin.firestore.Firestore,
@@ -154,7 +171,10 @@ export async function validateAndProcessReport(
   options?: ValidationConfig,
   currentDate?: Date
 ): Promise<ValidationFinalResult> {
-  const config: Required<ValidationConfig> = { ...DEFAULT_CONFIG, ...options };
+  const config = {
+    ...DEFAULT_CONFIG,
+    ...options,
+  };
   const now = currentDate || new Date();
   const stateHistory: ReportStateMachineStatus[] = ['submitted'];
 
@@ -175,14 +195,92 @@ export async function validateAndProcessReport(
     };
   }
 
-  // --- STAGE 2: Duplicate Detection with Geohash + Haversine inside a Transaction ---
+  // --- STAGE 3: Server-side Vision Model Service Analysis ---
+  // Run Stage 3 outside transaction to avoid Firestore transaction retry penalties on network latency
+  const stage3Input: Stage3Input = {
+    imageUrl: input.imageUrl,
+    category: input.category,
+    description: input.description,
+  };
+
+  const stage3Result = await validateStage3(
+    stage3Input,
+    options?.visionService,
+    options?.stage3,
+    now
+  );
+
+  // If Stage 3 did NOT approve:
+  if (stage3Result.status !== 'approved') {
+    stateHistory.push(stage3Result.status);
+
+    // Save documented rejection or retry report in Firestore for auditable tracking
+    const failedReportRef = db.collection('reports').doc();
+    const geohash = encodeGeohash(input.latitude, input.longitude, 7);
+    const geohashPrefix = encodeGeohash(input.latitude, input.longitude, 6);
+
+    const docData: Record<string, unknown> = {
+      reportId: failedReportRef.id,
+      reporterId: input.reporterId,
+      reporterName: input.reporterName || 'Citizen',
+      imageUrl: input.imageUrl,
+      storagePath: input.storagePath || '',
+      location: new admin.firestore.GeoPoint(input.latitude, input.longitude),
+      accuracy: input.accuracy,
+      geohash,
+      geohashPrefix,
+      district: input.district || 'Colombo',
+      addressText: input.addressText || '',
+      category: input.category,
+      description: input.description ? input.description.trim() : '',
+      status: stage3Result.status,
+      stateHistory,
+      rejectionReason: stage3Result.explanation,
+      pointsAwarded: 0, // Always 0
+      aiAnalysis: {
+        status: stage3Result.status,
+        reasonCode: stage3Result.reasonCode,
+        explanation: stage3Result.explanation,
+        error: stage3Result.error || null,
+        canRetry: stage3Result.canRetry,
+        retryCount: stage3Result.retryCount,
+        analyzedAt: admin.firestore.Timestamp.fromDate(stage3Result.documentedAt),
+        ...(stage3Result.analysis || {}),
+      },
+      createdAt: admin.firestore.Timestamp.fromDate(now),
+      updatedAt: admin.firestore.Timestamp.fromDate(now),
+    };
+
+    if (stage3Result.status === 'retry_pending') {
+      docData.nextRetryAt = admin.firestore.Timestamp.fromDate(
+        new Date(now.getTime() + 60000)
+      );
+    }
+
+    await failedReportRef.set(docData);
+
+    return {
+      status: stage3Result.status,
+      isDuplicate: false,
+      reportId: failedReportRef.id,
+      stateHistory,
+      pointsAwarded: 0,
+      message: stage3Result.explanation,
+      rejectionReason: stage3Result.explanation,
+      aiAnalysis: stage3Result.analysis || {
+        reasonCode: stage3Result.reasonCode,
+        explanation: stage3Result.explanation,
+        error: stage3Result.error,
+      },
+    };
+  }
+
+  // --- STAGE 2: Duplicate Detection with Geohash + Haversine inside Transaction ---
   const fourteenDaysCutoff = new Date(now.getTime() - config.duplicateWindowDays * 24 * 60 * 60 * 1000);
   const geohash = encodeGeohash(input.latitude, input.longitude, 7);
   const geohashPrefix = encodeGeohash(input.latitude, input.longitude, 6);
 
   return await db.runTransaction(async (transaction) => {
-    // 1. Query existing reports for this user within the 14-day window
-    // Transactional consistency: query documents inside or prepare query
     const candidateQuery = db
       .collection('reports')
       .where('reporterId', '==', input.reporterId)
@@ -195,8 +293,8 @@ export async function validateAndProcessReport(
 
     for (const doc of candidateSnapshot.docs) {
       const data = doc.data();
-      // Skip rejected reports
-      if (data.status === 'rejected') continue;
+      // Skip rejected or retry_pending reports
+      if (data.status === 'rejected' || data.status === 'retry_pending') continue;
 
       const loc = data.location;
       if (!loc) continue;
@@ -206,7 +304,6 @@ export async function validateAndProcessReport(
 
       if (typeof docLat === 'number' && typeof docLon === 'number') {
         const distance = haversineDistance(input.latitude, input.longitude, docLat, docLon);
-        // Duplicate check: within duplicateRadiusMeters (default 50m)
         if (distance <= config.duplicateRadiusMeters) {
           duplicateDoc = doc;
           duplicateDistance = distance;
@@ -215,7 +312,7 @@ export async function validateAndProcessReport(
       }
     }
 
-    // A. DUPLICATE DETECTED
+    // A. DUPLICATE DETECTED: CREATE OBSERVATION (0 points)
     if (duplicateDoc) {
       const existingReportId = duplicateDoc.id;
       const observationsCollection = db
@@ -237,12 +334,12 @@ export async function validateAndProcessReport(
         status: 'still_present',
         pointsAwarded: 0, // Earns no points!
         distanceFromOriginalMeters: Math.round(duplicateDistance * 10) / 10,
+        aiAnalysis: stage3Result.analysis,
         observedAt: admin.firestore.Timestamp.fromDate(now),
       };
 
       transaction.set(observationRef, observationData);
 
-      // Update existing parent report
       transaction.update(duplicateDoc.ref, {
         lastObservedAt: admin.firestore.Timestamp.fromDate(now),
         observationCount: admin.firestore.FieldValue.increment(1),
@@ -259,10 +356,11 @@ export async function validateAndProcessReport(
         stateHistory,
         pointsAwarded: 0,
         message: `Hazard still present (recorded observation at ${Math.round(duplicateDistance)}m from original site). Earns 0 points.`,
+        aiAnalysis: stage3Result.analysis,
       };
     }
 
-    // B. UNIQUE REPORT: CREATE NEW REPORT
+    // B. UNIQUE REPORT: CREATE APPROVED NEW REPORT
     const newReportRef = db.collection('reports').doc();
     const newReportData = {
       reportId: newReportRef.id,
@@ -280,8 +378,9 @@ export async function validateAndProcessReport(
       description: input.description ? input.description.trim() : '',
       status: 'approved',
       stateHistory: ['submitted', 'validating', 'approved'],
-      riskLevel: 1,
-      pointsAwarded: 0, // Points are 0; never awarded on submission
+      riskLevel: stage3Result.analysis && stage3Result.analysis.confidence >= 0.85 ? 3 : 2,
+      pointsAwarded: 0, // Points are strictly 0 on submission
+      aiAnalysis: stage3Result.analysis,
       observationCount: 1,
       createdAt: admin.firestore.Timestamp.fromDate(now),
       updatedAt: admin.firestore.Timestamp.fromDate(now),
@@ -297,6 +396,7 @@ export async function validateAndProcessReport(
       stateHistory,
       pointsAwarded: 0,
       message: 'New hazard report validated and registered.',
+      aiAnalysis: stage3Result.analysis,
     };
   });
 }

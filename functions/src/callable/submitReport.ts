@@ -1,6 +1,6 @@
-import * as functions from "firebase-functions/v1";
-import * as admin from "firebase-admin";
-import { validateAndProcessReport, ReportInput } from "../validation/validateReport";
+import * as functions from 'firebase-functions/v1';
+import * as admin from 'firebase-admin';
+import { validateAndProcessReport, ReportInput } from '../validation/validateReport';
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -24,30 +24,37 @@ interface SubmitReportRequestData {
  * Callable Cloud Function: submitReport
  *
  * Implements authoritative report submission with the state machine:
- * submitted -> validating -> approved | rejected
+ * submitted -> validating -> approved | rejected | retry_pending
  *
  * Stage 1: Input & GPS validity, accuracy threshold (<=100m), and rate limiting.
  * Stage 2: Transactional duplicate detection (same user, <=50m radius, <=14 days).
- * Duplicates become "still present" observations in reports/{id}/observations with 0 points.
+ * Stage 3: Server-side vision model analysis (rubric, Zod schema, confidence threshold, timeout handling).
+ *
+ * Bound to Secret Manager secret GEMINI_API_KEY. Never hardcode API keys.
  */
-export const submitReport = functions.https.onCall(
-  async (data: SubmitReportRequestData, context) => {
+export const submitReport = functions
+  .runWith({
+    secrets: ['GEMINI_API_KEY'],
+    timeoutSeconds: 60,
+    memory: '256MB',
+  })
+  .https.onCall(async (data: SubmitReportRequestData, context) => {
     // 1. Authentication check
     if (!context.auth) {
       throw new functions.https.HttpsError(
-        "unauthenticated",
-        "You must be logged in to submit a dengue breeding hazard report."
+        'unauthenticated',
+        'You must be logged in to submit a dengue breeding hazard report.'
       );
     }
 
     const { uid } = context.auth;
 
     // 2. Fetch reporter profile for name & home district
-    let reporterName = "Citizen";
-    let userDistrict = "Colombo";
+    let reporterName = 'Citizen';
+    let userDistrict = 'Colombo';
 
     try {
-      const userDoc = await db.collection("users").doc(uid).get();
+      const userDoc = await db.collection('users').doc(uid).get();
       if (userDoc.exists) {
         const userData = userDoc.data();
         reporterName = userData?.displayName || reporterName;
@@ -71,18 +78,18 @@ export const submitReport = functions.https.onCall(
       addressText: data.addressText,
     };
 
-    // 3. Execute State Machine Validation (Stages 1 & 2 in Firestore Transaction)
+    // 3. Execute authoritative 3-Stage Validation Pipeline
     const result = await validateAndProcessReport(db, reportInput);
 
-    if (result.status === "rejected") {
+    if (result.status === 'rejected') {
       throw new functions.https.HttpsError(
-        "invalid-argument",
+        'invalid-argument',
         result.rejectionReason || result.message
       );
     }
 
     return {
-      success: true,
+      success: result.status === 'approved',
       status: result.status,
       isDuplicate: result.isDuplicate,
       reportId: result.reportId,
@@ -90,6 +97,6 @@ export const submitReport = functions.https.onCall(
       stateHistory: result.stateHistory,
       pointsAwarded: result.pointsAwarded,
       message: result.message,
+      aiAnalysis: result.aiAnalysis,
     };
-  }
-);
+  });
