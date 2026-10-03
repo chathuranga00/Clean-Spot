@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/widgets/scaffold_with_bottom_nav.dart';
 import '../../features/admin/presentation/admin_review_screen.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/data/auth_repository.dart';
@@ -20,11 +21,19 @@ import '../../features/reports/presentation/my_reports_screen.dart';
 import '../../features/reports/presentation/new_report_screen.dart';
 import '../../features/reports/presentation/report_detail_screen.dart';
 
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _homeNavigatorKey = GlobalKey<NavigatorState>();
+final _mapNavigatorKey = GlobalKey<NavigatorState>();
+final _reportNavigatorKey = GlobalKey<NavigatorState>();
+final _rewardsNavigatorKey = GlobalKey<NavigatorState>();
+final _profileNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateChangesProvider);
   final onboardingDone = ref.watch(onboardingProvider);
 
   return GoRouter(
+    navigatorKey: _rootNavigatorKey,
     initialLocation: '/splash',
     debugLogDiagnostics: false,
     redirect: (context, state) {
@@ -70,44 +79,101 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      // Top-level Auth and Onboarding routes
       GoRoute(
         path: '/splash',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
         path: '/onboarding',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         path: '/login',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
         path: '/register',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const RegisterScreen(),
       ),
       GoRoute(
         path: '/forgot-password',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: '/verify-email',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const EmailVerificationScreen(),
       ),
-      GoRoute(
-        path: '/home',
-        builder: (context, state) => const HomeScreen(),
+
+      // Bottom Navigation Shell for Main App Sections
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return ScaffoldWithBottomNavBar(navigationShell: navigationShell);
+        },
+        branches: [
+          // Branch 0: Home Dashboard
+          StatefulShellBranch(
+            navigatorKey: _homeNavigatorKey,
+            routes: [
+              GoRoute(
+                path: '/home',
+                builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          // Branch 1: Map
+          StatefulShellBranch(
+            navigatorKey: _mapNavigatorKey,
+            routes: [
+              GoRoute(
+                path: '/map',
+                builder: (context, state) => const MapScreen(),
+              ),
+            ],
+          ),
+          // Branch 2: Report Spot
+          StatefulShellBranch(
+            navigatorKey: _reportNavigatorKey,
+            routes: [
+              GoRoute(
+                path: '/report/new',
+                builder: (context, state) => const NewReportScreen(),
+              ),
+            ],
+          ),
+          // Branch 3: Rewards / Leaderboard
+          StatefulShellBranch(
+            navigatorKey: _rewardsNavigatorKey,
+            routes: [
+              GoRoute(
+                path: '/leaderboard',
+                builder: (context, state) => const LeaderboardScreen(),
+              ),
+            ],
+          ),
+          // Branch 4: Profile
+          StatefulShellBranch(
+            navigatorKey: _profileNavigatorKey,
+            routes: [
+              GoRoute(
+                path: '/profile',
+                builder: (context, state) => const ProfileScreen(),
+              ),
+            ],
+          ),
+        ],
       ),
-      GoRoute(
-        path: '/map',
-        builder: (context, state) => const MapScreen(),
-      ),
-      GoRoute(
-        path: '/report/new',
-        builder: (context, state) => const NewReportScreen(),
-      ),
+
+      // Sub-routes outside Bottom Nav
       GoRoute(
         path: '/report/:id',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? 'unknown';
           return ReportDetailScreen(reportId: id);
@@ -115,22 +181,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/my-reports',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const MyReportsScreen(),
       ),
       GoRoute(
-        path: '/leaderboard',
-        builder: (context, state) => const LeaderboardScreen(),
-      ),
-      GoRoute(
         path: '/education',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const EducationalScreen(),
       ),
       GoRoute(
-        path: '/profile',
-        builder: (context, state) => const ProfileScreen(),
-      ),
-      GoRoute(
         path: '/admin/review',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const AdminReviewScreen(),
       ),
     ],

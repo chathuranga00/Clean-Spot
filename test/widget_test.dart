@@ -2,6 +2,7 @@ import 'package:cleanspot/src/app.dart';
 import 'package:cleanspot/src/core/widgets/app_empty_state.dart';
 import 'package:cleanspot/src/core/widgets/app_error_state.dart';
 import 'package:cleanspot/src/core/widgets/app_loading_indicator.dart';
+import 'package:cleanspot/src/features/auth/data/auth_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,8 +13,11 @@ void main() {
     SharedPreferences.setMockInitialValues({});
 
     await tester.pumpWidget(
-      const ProviderScope(
-        child: CleanSpotApp(),
+      ProviderScope(
+        overrides: [
+          authStateChangesProvider.overrideWith((ref) => Stream.value(null)),
+        ],
+        child: const CleanSpotApp(),
       ),
     );
 
