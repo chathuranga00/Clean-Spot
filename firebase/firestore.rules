@@ -89,6 +89,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Historical Epidemiology Data (Epid.gov.lk official figures or synthetic benchmarks)
+    match /historicalEpidemiology/{recordId} {
+      // Authenticated users can read aggregated historical trend data
+      allow read: if isAuthenticated();
+      // Writable ONLY by authorized admins or PHI officers
+      allow write: if isAdmin();
+    }
+
+    // Historical Datasets Audit & Provenance Records
+    match /historicalDatasets/{datasetId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
     // Default deny-all for all other documents until each respective feature is built
     match /{document=**} {
       allow read, write: if false;

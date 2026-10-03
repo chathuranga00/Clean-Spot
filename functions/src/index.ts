@@ -47,3 +47,17 @@ export {
   fetchPublicReportDetails,
   PublicReportDetails,
 } from './callable/getPublicReportDetails';
+export { importHistoricalData } from './callable/importHistoricalData';
+export {
+  executeImportHistoricalData,
+  parseHistoricalCsv,
+} from './historical/historicalDataService';
+export {
+  HistoricalRecord,
+  HistoricalRecordSchema,
+  ImportDatasetMetadata,
+  ImportDatasetMetadataSchema,
+  ImportHistoricalPayload,
+  ImportResult,
+  SRI_LANKA_HEALTH_DISTRICTS,
+} from './historical/types';

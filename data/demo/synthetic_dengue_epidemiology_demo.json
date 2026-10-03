@@ -1,0 +1,193 @@
+{
+  "NOTICE": "CRITICAL DISCLAIMER: SYNTHETIC DEMO DATASET ONLY. THESE ARE SIMULATED REPRESENTATIVE FIGURES FOR DEVELOPMENT, TESTING, AND UI DEMONSTRATION PURPOSES. THESE DO NOT CONSTITUTE OFFICIAL OR VERIFIED FIGURES FROM EPID.GOV.LK (EPIDEMIOLOGY UNIT, MINISTRY OF HEALTH, SRI LANKA). NEVER RELY ON THIS FILE FOR EPIDEMIOLOGICAL OR PUBLIC HEALTH DECISIONS.",
+  "metadata": {
+    "sourceUrl": "https://www.epid.gov.lk/synthetic-demo-placeholder",
+    "accessDate": "2026-10-04T00:00:00.000Z",
+    "datasetVersion": "synthetic-demo-2024.1",
+    "isSynthetic": true,
+    "description": "Synthetic weekly Dengue surveillance demonstration dataset covering major districts across Sri Lanka (2024 Weeks 1 to 4). Formatted to match the CleanSpot historical epidemiology ingestion schema.",
+    "curatorNotes": "Simulated figures strictly generated for CleanSpot pipeline testing and offline emulator seeding."
+  },
+  "records": [
+    {
+      "year": 2024,
+      "weekNumber": 1,
+      "periodStart": "2024-01-01",
+      "periodEnd": "2024-01-07",
+      "district": "Colombo",
+      "cases": 245,
+      "deaths": 1,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 1,
+      "periodStart": "2024-01-01",
+      "periodEnd": "2024-01-07",
+      "district": "Gampaha",
+      "cases": 182,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 1,
+      "periodStart": "2024-01-01",
+      "periodEnd": "2024-01-07",
+      "district": "Kalutara",
+      "cases": 76,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 1,
+      "periodStart": "2024-01-01",
+      "periodEnd": "2024-01-07",
+      "district": "Kandy",
+      "cases": 94,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 1,
+      "periodStart": "2024-01-01",
+      "periodEnd": "2024-01-07",
+      "district": "Galle",
+      "cases": 63,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 2,
+      "periodStart": "2024-01-08",
+      "periodEnd": "2024-01-14",
+      "district": "Colombo",
+      "cases": 268,
+      "deaths": 1,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 2,
+      "periodStart": "2024-01-08",
+      "periodEnd": "2024-01-14",
+      "district": "Gampaha",
+      "cases": 195,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 2,
+      "periodStart": "2024-01-08",
+      "periodEnd": "2024-01-14",
+      "district": "Kalutara",
+      "cases": 81,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 2,
+      "periodStart": "2024-01-08",
+      "periodEnd": "2024-01-14",
+      "district": "Kandy",
+      "cases": 102,
+      "deaths": 1,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 2,
+      "periodStart": "2024-01-08",
+      "periodEnd": "2024-01-14",
+      "district": "Galle",
+      "cases": 58,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 3,
+      "periodStart": "2024-01-15",
+      "periodEnd": "2024-01-21",
+      "district": "Colombo",
+      "cases": 230,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 3,
+      "periodStart": "2024-01-15",
+      "periodEnd": "2024-01-21",
+      "district": "Gampaha",
+      "cases": 164,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 3,
+      "periodStart": "2024-01-15",
+      "periodEnd": "2024-01-21",
+      "district": "Ratnapura",
+      "cases": 88,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 3,
+      "periodStart": "2024-01-15",
+      "periodEnd": "2024-01-21",
+      "district": "Kurunegala",
+      "cases": 72,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 4,
+      "periodStart": "2024-01-22",
+      "periodEnd": "2024-01-28",
+      "district": "Colombo",
+      "cases": 215,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 4,
+      "periodStart": "2024-01-22",
+      "periodEnd": "2024-01-28",
+      "district": "Gampaha",
+      "cases": 150,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 4,
+      "periodStart": "2024-01-22",
+      "periodEnd": "2024-01-28",
+      "district": "Jaffna",
+      "cases": 95,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    },
+    {
+      "year": 2024,
+      "weekNumber": 4,
+      "periodStart": "2024-01-22",
+      "periodEnd": "2024-01-28",
+      "district": "Matara",
+      "cases": 42,
+      "deaths": 0,
+      "notes": "Synthetic demo figure"
+    }
+  ]
+}
