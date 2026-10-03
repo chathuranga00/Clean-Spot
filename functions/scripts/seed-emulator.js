@@ -123,6 +123,86 @@ async function seedEmulator() {
     console.log(`[DEMO DATA] Seeded report: ${report.reportId} (${report.category}, status: ${report.status})`);
   }
 
+  // 4. Seed DEMO Rewards & Coupons
+  const demoRewards = [
+    {
+      rewardId: 'reward_coils_10pk',
+      title: 'Mosquito Repellent Coils (10-pack)',
+      description: 'Organic citronella and neem active mosquito coils for continuous smoke-screen barrier defense.',
+      costPoints: 100,
+      category: 'repellent',
+      stockCount: 5,
+      isActive: true,
+      expiresAt: new Date(Date.now() + 90 * 86400000),
+      coupons: ['DEMO-COIL-101', 'DEMO-COIL-102', 'DEMO-COIL-103', 'DEMO-COIL-104', 'DEMO-COIL-105'],
+    },
+    {
+      rewardId: 'reward_abate_larvicide',
+      title: 'Abate 1SG Larvicide Kit',
+      description: 'Granular temephos 1% vector control treatment safe for potable and non-potable storage containers.',
+      costPoints: 150,
+      category: 'larvicide',
+      stockCount: 3,
+      isActive: true,
+      expiresAt: new Date(Date.now() + 60 * 86400000),
+      coupons: ['DEMO-ABATE-201', 'DEMO-ABATE-202', 'DEMO-ABATE-203'],
+    },
+    {
+      rewardId: 'reward_phi_certificate',
+      title: 'National Dengue Center Certificate',
+      description: 'Official framed civic defense commendation signed by National Dengue Control Unit officers.',
+      costPoints: 250,
+      category: 'certificate',
+      stockCount: 10,
+      isActive: true,
+      expiresAt: new Date(Date.now() + 365 * 86400000),
+      coupons: ['DEMO-CERT-301', 'DEMO-CERT-302', 'DEMO-CERT-303'],
+    },
+    {
+      rewardId: 'reward_expired_demo',
+      title: 'Monsoon Flash Kit (Expired Demo)',
+      description: 'Promotional seasonal campaign kit included for expired offer rejection testing.',
+      costPoints: 75,
+      category: 'equipment',
+      stockCount: 2,
+      isActive: true,
+      expiresAt: new Date(Date.now() - 5 * 86400000), // Expired 5 days ago
+      coupons: ['DEMO-EXP-401', 'DEMO-EXP-402'],
+    },
+  ];
+
+  for (const reward of demoRewards) {
+    const rewardRef = db.collection('rewards').doc(reward.rewardId);
+    await rewardRef.set({
+      rewardId: reward.rewardId,
+      title: reward.title,
+      description: reward.description,
+      costPoints: reward.costPoints,
+      category: reward.category,
+      stockCount: reward.stockCount,
+      isActive: reward.isActive,
+      expiresAt: admin.firestore.Timestamp.fromDate(reward.expiresAt),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    for (let i = 0; i < reward.coupons.length; i++) {
+      const code = reward.coupons[i];
+      const couponId = `coupon_${reward.rewardId}_${i + 1}`;
+      await rewardRef.collection('coupons').doc(couponId).set({
+        couponId,
+        rewardId: reward.rewardId,
+        code,
+        isRedeemed: false,
+        redeemedBy: null,
+        redeemedAt: null,
+        redemptionId: null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+    console.log(`[DEMO DATA] Seeded reward: ${reward.title} with ${reward.coupons.length} DEMO coupons`);
+  }
+
   console.log('--- [DEMO DATA] Seeding complete! ---');
   console.log('You can now log in using:');
   console.log(`  Email:    ${demoEmail}`);

@@ -288,6 +288,40 @@ class ProfileScreen extends ConsumerWidget {
                           statusText: 'Honorary civic award',
                           isAvailable: totalPoints >= 250,
                         ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                ),
+                                onPressed: () {
+                                  try {
+                                    context.push('/rewards');
+                                  } catch (_) {}
+                                },
+                                icon: const Icon(Icons.storefront, size: 16),
+                                label: const Text('Reward Shop', style: TextStyle(fontSize: 12)),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                ),
+                                onPressed: () {
+                                  try {
+                                    context.push('/redemptions');
+                                  } catch (_) {}
+                                },
+                                icon: const Icon(Icons.receipt_long, size: 16),
+                                label: const Text('My Coupons', style: TextStyle(fontSize: 12)),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),

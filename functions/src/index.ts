@@ -32,3 +32,13 @@ export {
   PointsTransactionRecord,
   AwardPointsResult,
 } from './points/awardReportPoints';
+export { redeemReward } from './callable/redeemReward';
+export {
+  executeRedeemRewardTransaction,
+  RedeemRewardInput,
+  RedeemRewardResult,
+} from './rewards/redeemRewardService';
+export {
+  seedDemoRewardsAndCoupons,
+  DEMO_REWARDS_CATALOG,
+} from './rewards/seedRewards';
