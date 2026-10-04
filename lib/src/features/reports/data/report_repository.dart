@@ -99,18 +99,17 @@ class ReportRepository {
     });
   }
 
-  /// Streams active breeding hazards (pending or verified)
+  /// Streams active breeding hazards (verified or approved community reports)
   Stream<List<ReportModel>> watchNearbyHazards({String? district}) {
     Query<Map<String, dynamic>> query = _firestore
         .collection('reports')
-        .where('status', whereIn: ['pending', 'verified', 'in_progress'])
-        .limit(10);
+        .where('status', whereIn: ['verified', 'approved', 'in_progress', 'still_present']);
 
     if (district != null && district.isNotEmpty) {
       query = query.where('district', isEqualTo: district);
     }
 
-    return query.snapshots().map((snapshot) {
+    return query.limit(10).snapshots().map((snapshot) {
       return snapshot.docs
           .map((doc) => ReportModel.fromMap(doc.data(), doc.id))
           .toList();

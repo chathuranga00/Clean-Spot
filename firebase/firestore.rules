@@ -60,10 +60,10 @@ service cloud.firestore {
     match /reports/{reportId} {
       // A citizen sees their own reports.
       // Approved/verified reports are visible to all authenticated users for
-      // the public map. Admins see everything.
+      // the public map and community hazard feed. Admins see everything.
       allow read: if isAuthenticated() && (
-        resource.data.reporterId == request.auth.uid ||
-        resource.data.status in ['approved', 'verified'] ||
+        resource.data.get('reporterId', '') == request.auth.uid ||
+        resource.data.get('status', '') in ['approved', 'verified', 'in_progress', 'still_present', 'resolved'] ||
         isAdmin()
       );
 
@@ -89,7 +89,7 @@ service cloud.firestore {
       match /observations/{observationId} {
         // A citizen may read their own observation; admins see all.
         allow read: if isAuthenticated() &&
-                    (resource.data.reporterId == request.auth.uid || isAdmin());
+                    (resource.data.get('reporterId', '') == request.auth.uid || isAdmin());
         // Observations are written only by Cloud Functions (admin SDK).
         allow create, update, delete: if false;
       }
