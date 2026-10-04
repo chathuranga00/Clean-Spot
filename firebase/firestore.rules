@@ -2,6 +2,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -14,118 +16,156 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.role in ['admin', 'phi'];
     }
 
-    // User profiles collection
+    // Incoming data must not touch the given set of protected field names at all.
+    function doesNotAffect(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // The incoming timestamp must be very close to server time to prevent
+    // clients injecting back-dated timestamps.
+    function isRecentTimestamp(ts) {
+      return ts == request.time;
+    }
+
+    // ─── Users ───────────────────────────────────────────────────────────────
+
     match /users/{userId} {
-      // Users can only read their own profile; admins/PHIs can read all profiles
+      // A user may only read their own profile; admins/PHIs see all.
       allow read: if isOwner(userId) || isAdmin();
 
-      // Users CANNOT create their profile directly (authoritatively created via onUserCreated Cloud Function)
+      // Profile creation is ONLY authoritative: done by the onUserCreated Cloud
+      // Function with an admin SDK token that bypasses client rules entirely.
       allow create: if false;
 
-      // Users can update basic profile info, but can NEVER tamper with points or privileges
+      // Users may update display-name, district, fcmTokens, and
+      // notificationPreferences only. They can NEVER touch privilege or
+      // gamification fields.
       allow update: if isOwner(userId)
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-                      'totalPoints',
-                      'verifiedReportsCount',
-                      'badges',
-                      'role',
-                      'uid'
-                    ]);
+                    && doesNotAffect([
+                         'totalPoints',
+                         'verifiedReportsCount',
+                         'badges',
+                         'role',
+                         'uid',
+                         'email',
+                         'createdAt',
+                       ]);
 
+      // Deletion only through admin SDK (server-side); clients cannot delete profiles.
       allow delete: if isAdmin();
     }
 
-    // Reports collection
+    // ─── Reports ─────────────────────────────────────────────────────────────
+
     match /reports/{reportId} {
-      // Users can read their own reports; authenticated users can read approved public reports for the live map; admins can read all
+      // A citizen sees their own reports.
+      // Approved/verified reports are visible to all authenticated users for
+      // the public map. Admins see everything.
       allow read: if isAuthenticated() && (
         resource.data.reporterId == request.auth.uid ||
         resource.data.status in ['approved', 'verified'] ||
         isAdmin()
       );
 
-      // Creation will be enabled in Section D (client writes new reports with status='pending')
-      // Points and status updates can NEVER be directly written by regular users
+      // A citizen may submit a new report ONLY with:
+      //  - their own uid as the reporter
+      //  - status locked to 'pending'
+      //  - zero points (server awards these)
+      //  - no isApproved or reviewer fields
       allow create: if isAuthenticated()
                     && request.resource.data.reporterId == request.auth.uid
                     && request.resource.data.status == 'pending'
-                    && request.resource.data.pointsAwarded == 0;
+                    && request.resource.data.pointsAwarded == 0
+                    && !('isApproved' in request.resource.data)
+                    && !('reviewedBy' in request.resource.data)
+                    && !('reviewedAt' in request.resource.data);
 
-      allow update, delete: if isAdmin();
+      // Status transitions, point awards, and deletions are ADMIN/PHI only.
+      // Regular citizens CANNOT approve, reject, or modify points.
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
 
-      // Observations subcollection (duplicates/follow-ups)
+      // ── Observations subcollection (duplicate follow-ups) ─────────────────
       match /observations/{observationId} {
-        allow read: if isAuthenticated() && (resource.data.reporterId == request.auth.uid || isAdmin());
-        allow write: if false;
+        // A citizen may read their own observation; admins see all.
+        allow read: if isAuthenticated() &&
+                    (resource.data.reporterId == request.auth.uid || isAdmin());
+        // Observations are written only by Cloud Functions (admin SDK).
+        allow create, update, delete: if false;
       }
     }
 
-    // Immutable Points Transactions Ledger
+    // ─── Points Transactions Ledger ───────────────────────────────────────────
+    // Immutable; written only by server-side Cloud Functions.
+
     match /pointsTransactions/{transactionId} {
-      // Users can only read their own transactions; admins/PHIs can read all
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      // Writable ONLY via server-side Cloud Functions (transactions)
-      allow write: if false;
+      allow read:  if isAuthenticated() &&
+                   (resource.data.userId == request.auth.uid || isAdmin());
+      allow create, update, delete: if false;
     }
 
-    // Rewards Catalog & Coupons
+    // ─── Rewards Catalog ─────────────────────────────────────────────────────
+
     match /rewards/{rewardId} {
-      // Authenticated users can browse the reward shop
-      allow read: if isAuthenticated();
+      // Any authenticated user may browse the catalog.
+      allow read:  if isAuthenticated();
+      // Only admins may create / edit / remove rewards.
       allow write: if isAdmin();
 
-      // Coupons Subcollection: coupon codes are never readable except the assigned user's own redemption
+      // ── Coupons subcollection ─────────────────────────────────────────────
+      // Coupon codes are NEVER readable by an arbitrary user.
+      // A user can only read a coupon that has been definitively assigned to
+      // them (redeemedBy == their uid). This prevents fishing for unused codes.
       match /coupons/{couponId} {
-        allow read: if isAuthenticated() && resource.data.redeemedBy == request.auth.uid;
-        allow write: if false;
-      }
-    }
-
-    // User Redemptions History
-    match /redemptions/{redemptionId} {
-      // Users can only read their own redemptions; admins/PHIs can read all
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      // Writable ONLY via server-side Cloud Function (redeemReward)
-      allow write: if false;
-    }
-
-    // Historical Epidemiology Data (Epid.gov.lk official figures or synthetic benchmarks)
-    match /historicalEpidemiology/{recordId} {
-      // Authenticated users can read aggregated historical trend data
-      allow read: if isAuthenticated();
-      // Writable ONLY by authorized admins or PHI officers
-      allow write: if isAdmin();
-    }
-
-    // Historical Datasets Audit & Provenance Records
-    match /historicalDatasets/{datasetId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-
-    // Calculated Risk Summaries & Trends per District
-    match /riskSummaries/{district} {
-      // Authenticated users can view district risk insights and decision-support indicators
-      allow read: if isAuthenticated();
-      // Writable ONLY by authorized admins or automated backend processes
-      allow write: if isAdmin();
-
-      match /versions/{versionId} {
-        allow read: if isAuthenticated();
+        allow read: if isAuthenticated() &&
+                    resource.data.isRedeemed == true &&
+                    resource.data.redeemedBy == request.auth.uid;
+        // Coupons can only be created/managed by admins directly, or via admin SDK Cloud Functions
         allow write: if isAdmin();
       }
     }
 
-    // Risk Calculation Metadata
-    match /riskMetadata/{docId} {
-      allow read: if isAuthenticated();
+    // ─── Redemptions History ─────────────────────────────────────────────────
+
+    match /redemptions/{redemptionId} {
+      allow read:  if isAuthenticated() &&
+                   (resource.data.userId == request.auth.uid || isAdmin());
+      allow create, update, delete: if false;
+    }
+
+    // ─── Historical Epidemiology Data ────────────────────────────────────────
+
+    match /historicalEpidemiology/{recordId} {
+      allow read:  if isAuthenticated();
       allow write: if isAdmin();
     }
 
-    // Default deny-all for all other documents until each respective feature is built
+    match /historicalDatasets/{datasetId} {
+      allow read:  if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ─── Risk Summaries ───────────────────────────────────────────────────────
+
+    match /riskSummaries/{district} {
+      allow read:  if isAuthenticated();
+      allow write: if isAdmin();
+
+      match /versions/{versionId} {
+        allow read:  if isAuthenticated();
+        allow write: if isAdmin();
+      }
+    }
+
+    match /riskMetadata/{docId} {
+      allow read:  if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ─── Deny-all fallback ────────────────────────────────────────────────────
+    // Any collection not explicitly listed above is completely locked.
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
-

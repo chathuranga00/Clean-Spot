@@ -12,7 +12,7 @@
  * 8. Concurrency / race condition protection via Firestore transactions
  */
 
-process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
+process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8088';
 
 import * as admin from 'firebase-admin';
 import { haversineDistance, encodeGeohash } from '../src/utils/geo';

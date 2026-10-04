@@ -61,3 +61,4 @@ key.properties
 service-account*.json
 secrets.json
 
+node_modules

@@ -1,19 +1,43 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Breeding spot report images
-    match /reports/{userId}/{fileName} {
-      // Authenticated users can read report photos for verification & map view
-      allow read: if request.auth != null;
 
-      // Users can only upload photos to their own folder; maximum 5MB, must be image
-      allow write: if request.auth != null
-                    && request.auth.uid == userId
-                    && request.resource.size < 5 * 1024 * 1024
-                    && request.resource.contentType.matches('image/.*');
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    // Deny-all fallback
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role in ['admin', 'phi'];
+    }
+
+    // Breeding spot report images: /reports/{userId}/{fileName}
+    match /reports/{userId}/{fileName} {
+      // Authenticated users may view report photos (for feed, map, and review).
+      // Unauthenticated users are denied.
+      allow read: if isAuthenticated();
+
+      // Only the authenticated owner can upload photos to their own path.
+      // Strict constraints:
+      // 1. Must be authenticated as the owner
+      // 2. Max size 5 MB
+      // 3. Content type must be an image
+      // 4. Overwriting or tampering with existing images is disallowed (create only)
+      allow create: if isOwner(userId)
+                    && request.resource.size < 5 * 1024 * 1024
+                    && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
+
+      // Updates are disallowed; photos are immutable evidence.
+      allow update: if false;
+
+      // Deletion is allowed only by authorized admins or the uploading owner.
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Deny-all fallback for any other path in storage
     match /{allPaths=**} {
       allow read, write: if false;
     }
