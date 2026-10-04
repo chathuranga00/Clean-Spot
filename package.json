@@ -1,7 +1,8 @@
 {
   "name": "cleanspot-root",
   "scripts": {
-    "test:rules": "jest --runInBand --forceExit"
+    "test:rules": "jest --runInBand --forceExit",
+    "test:functions": "npx firebase-tools emulators:exec --only firestore --project demo-cleanspot \"npm --prefix functions test\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",

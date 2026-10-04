@@ -23,7 +23,7 @@ class FirebaseEmulatorManager {
   }
 
   static const int authPort = 9099;
-  static const int firestorePort = 8080;
+  static const int firestorePort = 8088;
   static const int storagePort = 9199;
   static const int functionsPort = 5001;
 

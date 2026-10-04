@@ -99,7 +99,7 @@ The project includes pre-configured emulator ports in [`firebase.json`](file:///
 | :--- | :--- | :--- |
 | **Emulator UI** | `4000` | Web dashboard to view Auth, Firestore data, & Storage buckets |
 | **Auth** | `9099` | Local authentication simulator |
-| **Cloud Firestore** | `8080` | Local NoSQL document database |
+| **Cloud Firestore** | `8088` | Local NoSQL document database |
 | **Cloud Storage** | `9199` | Local image bucket storage |
 | **Cloud Functions** | `5001` | Local Node.js serverless trigger runtime |
 
