@@ -245,6 +245,8 @@ final filteredUserReportsProvider =
 /// Streams active community hazards
 final nearbyHazardsStreamProvider =
     StreamProvider.autoDispose<List<ReportModel>>((ref) {
+  final authUser = ref.watch(authStateChangesProvider).value;
+  if (authUser == null) return Stream.value(const []);
   final user = ref.watch(userProfileStreamProvider).value;
   return ref.watch(reportRepositoryProvider).watchNearbyHazards(district: user?.district);
 });
