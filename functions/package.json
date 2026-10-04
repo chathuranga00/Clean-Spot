@@ -2,7 +2,7 @@
   "name": "cleanspot-functions",
   "scripts": {
     "lint": "eslint --ext .js,.ts .",
-    "build": "tsc",
+    "build": "tsc && node -e \"process.env.GCLOUD_PROJECT = 'demo-cleanspot'; process.env.FUNCTIONS_MANIFEST_OUTPUT_PATH = './functions.yaml'; require('./node_modules/firebase-functions/lib/bin/firebase-functions.js');\" .",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",

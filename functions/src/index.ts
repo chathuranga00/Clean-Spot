@@ -5,6 +5,8 @@
  * are orchestrated authoritatively via server-side Cloud Functions.
  */
 
+import 'firebase-admin/firestore';
+
 export { geminiApiKey } from './config/secrets';
 export { onUserCreated } from './triggers/onUserCreated';
 export { submitReport } from './callable/submitReport';

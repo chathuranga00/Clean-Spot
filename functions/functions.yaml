@@ -1,0 +1,130 @@
+{
+  "endpoints": {
+    "onUserCreated": {
+      "platform": "gcfv1",
+      "availableMemoryMb": null,
+      "timeoutSeconds": null,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "eventTrigger": {
+        "eventType": "providers/firebase.auth/eventTypes/user.create",
+        "eventFilters": {
+          "resource": "projects/demo-cleanspot"
+        },
+        "retry": false
+      },
+      "labels": {},
+      "entryPoint": "onUserCreated"
+    },
+    "submitReport": {
+      "platform": "gcfv1",
+      "labels": {},
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 60,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "secretEnvironmentVariables": [
+        {
+          "key": "GEMINI_API_KEY"
+        }
+      ],
+      "callableTrigger": {},
+      "entryPoint": "submitReport"
+    },
+    "redeemReward": {
+      "platform": "gcfv1",
+      "labels": {},
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 30,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "callableTrigger": {},
+      "entryPoint": "redeemReward"
+    },
+    "getPublicReportDetails": {
+      "platform": "gcfv1",
+      "labels": {},
+      "availableMemoryMb": 256,
+      "timeoutSeconds": 15,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "callableTrigger": {},
+      "entryPoint": "getPublicReportDetails"
+    },
+    "importHistoricalData": {
+      "platform": "gcfv1",
+      "labels": {},
+      "availableMemoryMb": 512,
+      "timeoutSeconds": 120,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "callableTrigger": {},
+      "entryPoint": "importHistoricalData"
+    },
+    "calculateRiskInsights": {
+      "platform": "gcfv1",
+      "labels": {},
+      "availableMemoryMb": 512,
+      "timeoutSeconds": 120,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "callableTrigger": {},
+      "entryPoint": "calculateRiskInsights"
+    },
+    "scheduledRiskCalculation": {
+      "platform": "gcfv1",
+      "availableMemoryMb": 512,
+      "timeoutSeconds": 300,
+      "minInstances": null,
+      "maxInstances": null,
+      "ingressSettings": null,
+      "serviceAccountEmail": null,
+      "vpc": null,
+      "scheduleTrigger": {
+        "schedule": "0 2 * * *",
+        "retryConfig": {
+          "retryCount": null,
+          "maxDoublings": null,
+          "maxRetryDuration": null,
+          "maxBackoffDuration": null,
+          "minBackoffDuration": null
+        },
+        "timeZone": "Asia/Colombo"
+      },
+      "labels": {},
+      "entryPoint": "scheduledRiskCalculation"
+    }
+  },
+  "specVersion": "v1alpha1",
+  "requiredAPIs": [
+    {
+      "api": "cloudscheduler.googleapis.com",
+      "reason": "Needed for scheduled functions."
+    }
+  ],
+  "extensions": {},
+  "params": [
+    {
+      "type": "secret",
+      "name": "GEMINI_API_KEY"
+    }
+  ]
+}

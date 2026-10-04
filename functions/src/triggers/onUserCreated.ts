@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -28,8 +29,8 @@ export const onUserCreated = functions.auth.user().onCreate(async (user) => {
       totalPoints: 0,
       verifiedReportsCount: 0,
       badges: [],
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     console.log(`[CleanSpot] Authoritative user document initialized for UID: ${user.uid}`);
