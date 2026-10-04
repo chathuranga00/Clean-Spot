@@ -329,6 +329,41 @@ describe('Reports Collection Security', () => {
     const db = testEnv.authenticatedContext(REPORTER, makeCitizenToken()).firestore();
     await assertFails(db.doc('reports/rep_pending_001').delete());
   });
+
+  test('A citizen can query their own reports by reporterId', async () => {
+    const db = testEnv.authenticatedContext(REPORTER, makeCitizenToken()).firestore();
+    await assertSucceeds(
+      db.collection('reports').where('reporterId', '==', REPORTER).get()
+    );
+  });
+
+  test('A citizen CANNOT query another user\'s reports by reporterId', async () => {
+    const db = testEnv.authenticatedContext(OTHER_USER, makeCitizenToken()).firestore();
+    await assertFails(
+      db.collection('reports').where('reporterId', '==', REPORTER).get()
+    );
+  });
+
+  test('A citizen can query nearby hazards by status (approved/verified/in_progress/still_present)', async () => {
+    const db = testEnv.authenticatedContext(OTHER_USER, makeCitizenToken()).firestore();
+    await assertSucceeds(
+      db.collection('reports').where('status', 'in', ['verified', 'approved', 'in_progress', 'still_present']).get()
+    );
+  });
+
+  test('A citizen can query approved map markers', async () => {
+    const db = testEnv.authenticatedContext(OTHER_USER, makeCitizenToken()).firestore();
+    await assertSucceeds(
+      db.collection('reports').where('status', '==', 'approved').get()
+    );
+  });
+
+  test('A citizen CANNOT query all reports unfiltered', async () => {
+    const db = testEnv.authenticatedContext(OTHER_USER, makeCitizenToken()).firestore();
+    await assertFails(
+      db.collection('reports').get()
+    );
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
